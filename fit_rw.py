@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Fri Jun  2 17:11:40 2017
-Fit dual reinformcent learning model with lapse probability
+Fit dual update RW model
 @author: dimitrije
 """
 
@@ -13,9 +12,8 @@ from pymc3.distributions.timeseries import scan
 from theano.tensor import exp,log
 import theano.tensor as tt
 
-from pymc3 import Model, sample, fit
-from pymc3 import traceplot, forestplot, summary, trace_to_dataframe
-from pymc3 import Beta, Gamma, Deterministic, HalfCauchy, Categorical
+from pymc3 import Model, fit, trace_to_dataframe
+from pymc3 import Deterministic, HalfCauchy, Categorical
 
 from theano_models import rw_model
 
@@ -51,7 +49,7 @@ for i,file in enumerate(f):
         #reverse labels (1,2) to (1,0) if the initial best choice was 2
         data['A'] = 2 - data['A']
 
-    data['T'] = 1 #set the switch value to one (it is set to zero only for nan trials)
+    data['T'] = 1 #set the switch variable to one (it is set to zero only for nan trials)
     nans[:,i] = data.isnull().any(axis = 1)
     data[nans[:,i]] = 0
     data = data.astype(int)
@@ -85,7 +83,7 @@ with Model() as dual_model:
     V0 = tt.stacklists([2*muA -1, 2*muB -1]).T
     
     #compute the choice values
-    (Q, updates) = scan(rw_model, sequences = [inp],
+    (Q, _) = scan(rw_model, sequences = [inp],
                  outputs_info = V0,
                  non_sequences = [alpha, kappa, range(n_subs)],
                  name = 'rw')
@@ -110,7 +108,7 @@ with Model() as dual_model:
 
 #fit the model    
 with dual_model:
-     approx = fit(method = 'advi', n = 5000, progressbar = True)
+     approx = fit(method = 'advi', n = 50000, progressbar = True)
 
 #sample from posterior
 nsamples = 1000
@@ -124,7 +122,7 @@ data = trace_to_dataframe(trace, include_transformed=True,
                                     'atau', 'alpha'])
 
 #get posterior samples of the predicted response value in the postreversal phase
-Gs = np.zeros((10000, 35, 22, 2))
+Gs = np.zeros((10000, 35, n_subs, 2))
 for i in range(10):
     trace = approx.sample(nsamples, include_transformed = True)
     Gs[i*1000:(i+1)*1000] = trace['G'][:,last:]
