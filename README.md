@@ -12,7 +12,8 @@ matplotlib
 
 ## Installation 
 
+'''bash
 conda create -n predch python=3.6
 source activate predch 
 conda install -c conda-forge pymc3 seaborn pytables numpy pandas matplotlib
-
+'''
