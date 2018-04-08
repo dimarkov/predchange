@@ -10,9 +10,11 @@ pymc3 (version 3.1+)
 seaborn  
 matplotlib
 
-## Installation 
+## Installation
 
+```bash
 conda create -n predch python=3.6  
 source activate predch  
 conda install -c conda-forge pymc3 seaborn pytables numpy pandas matplotlib
+```
 
