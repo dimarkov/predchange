@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+"""
+Model comparison of dual update RW and ED-HMM models
+@author: Dimitrije Markovic
+"""
 import pandas as pd
 import numpy as np
 
@@ -21,8 +25,8 @@ LME = pd.DataFrame(index = range(num_sub))
 
 cols = ['DU-RW', 'ED-HMM']
 
-LME['DU-RW'] = store['eat/rl/ppc']
-LME['ED-HMM'] = store['eat/edhmm/ppc']
+LME['DU-RW'] = store['durw/pplme']
+LME['ED-HMM'] = store['edhmm/pplme']
 store.close()
 
 N, M = LME.shape
@@ -43,7 +47,7 @@ with Model() as model:
     tau = HalfCauchy('tau', beta = 1)
     mf = Dirichlet('mf', a = tt.ones(M)/tau, shape=(M,))
     xs = DensityDist('logml', logp_mix(mf), observed=LME)
-    approx = fit(method='advi', n = 20000)
+    approx = fit(method='advi', n = 10000)
     
 trace = approx.sample(nsample)    
 traceplot(trace);
@@ -78,4 +82,4 @@ dp = pd.DataFrame(data = p, index = index, columns = columns)
 sns.heatmap(dp, vmin=0, vmax=1, cmap = 'viridis', ax = ax3);
 ax3.set_title('model attribution');
 ax3.text(-.35,22, 'B')
-fig.savefig('mc.pdf', bbox_inches = 'tight', transparent = True)
+fig.savefig('Fig7.pdf', bbox_inches = 'tight', transparent = True)

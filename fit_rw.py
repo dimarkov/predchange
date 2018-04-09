@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 Fit dual update RW model
-@author: dimitrije
+@author: Dimitrije Markovic
 """
 
 from os import walk
