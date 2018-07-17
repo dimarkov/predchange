@@ -21,6 +21,8 @@ from theano_models import edhmm_model
 import numpy as np
 import pandas as pd
 
+from stats import sample_from_posterior
+
 f = []
 for (dirpath, dirnames, filenames) in walk('data'):
     f.extend(filenames)
@@ -58,7 +60,7 @@ for i,file in enumerate(f[:22]):
     inp[:,i,:] = data.values
 
 
-#define the hierarchical models
+#define the hierarchical parametric model
 with Model() as edhmm:
     d = tt.arange(d_max) #vector of possible duration values from zero to d_max
     d = tt.tile(d, (n_subs,1))
@@ -70,7 +72,7 @@ with Model() as edhmm:
     #set hierarchical prior for delta parameter of prior beliefs p_0(d)
     dtau = HalfCauchy('dtau', beta = 1)
     dloc = HalfCauchy('dloc', beta = dtau, shape = (n_subs,))
-    delta = Deterministic('delta', dloc/(1+dloc)) 
+    delta = Deterministic('delta', 1/(1+(dloc)**2)) 
     
     #set hierarchical prior for r parameter of prior beleifs p_0(d)
     rtau = HalfCauchy('rtau', beta = 1)
@@ -90,12 +92,15 @@ with Model() as edhmm:
     beta = Deterministic('beta', 1/bloc)
     
     #set hierarchical priors for initial inital beliefs about reward probability
-    mtau = HalfCauchy('mtau', beta = 4)
-    mloc = HalfCauchy('mloc', beta = mtau, shape = (n_subs,2))
-    muA = Deterministic('muA', mloc[:,0]/(1+mloc[:,0])) 
-    muB = Deterministic('muB', 1/(1+mloc[:,1])) 
-    init = tt.stacklists([[10*muA, 10*(1-muA)], \
-                          [10*muB, 10*(1-muB)]]).dimshuffle(2,0,1)
+#    mtau = HalfCauchy('mtau', beta = 4)
+#    mloc = HalfCauchy('mloc', beta = mtau, shape = (n_subs,2))
+#    muA = Deterministic('muA', mloc[:,0]/(1+mloc[:,0])) 
+#    muB = Deterministic('muB', 1/(1+mloc[:,1])) 
+#    init = tt.stacklists([[10*muA, 10*(1-muA)], \
+#                          [10*muB, 10*(1-muB)]]).dimshuffle(2,0,1)
+
+    init = tt.stacklists([[tt.ones(n_subs)*8, tt.ones(n_subs)*2], \
+                      [tt.ones(n_subs)*2, tt.ones(n_subs)*8]]).dimshuffle(2,0,1)
     
     #compute the posterior beleifs over states, durations, and reward probabilities
     (post, _) = scan(edhmm_model, 
@@ -120,9 +125,9 @@ with Model() as edhmm:
     U = Deterministic('U', 2*mean-1)
 
     #set hierarchical prior for response biases
-    ctau = HalfCauchy('ctau', beta = 1)
-    cloc = HalfCauchy('cloc', beta = ctau, shape = (n_subs,))
-    c0 = Deterministic('c0', cloc/(1+cloc))
+#    ctau = HalfCauchy('ctau', beta = 1)
+#    cloc = HalfCauchy('cloc', beta = ctau, shape = (n_subs,))
+    c0 = tt.ones(n_subs)/2 #Deterministic('c0', cloc/(1+cloc))
 
     #compute response noise and response bias modulated expected free energy
     G = Deterministic('G', beta[None,:, None]*U + log([c0, 1-c0]).T[None, :, :])
@@ -137,45 +142,17 @@ with Model() as edhmm:
 
 #fit the model    
 with edhmm:
-    approx = fit(method = 'advi', n = 5000, progressbar = True)
+    approx = fit(method = 'advi', n = 50000, progressbar = True)
 
-#sample from posterior
-nsample = 1000
-trace = approx.sample(nsample, include_transformed = True)
-
-data = trace_to_dataframe(trace, include_transformed=True, 
-                          varnames=['ctau', 'c0', 
-                                    'mtau', 'muA', 'muB', 
-                                    'btau', 'beta',
-                                    'dtau', 'delta', 
-                                    'rtau', 'r'])
-    
-#get posterior samples of the predicted response value in the postreversal phase
-gs = np.zeros((10000, 35, n_subs, 2))
-for i in range(10):
-    trace = approx.sample(nsample, include_transformed = True)
-    gs[i*1000:(i+1)*1000] = trace['G'][:,last:]
-
-post_like = np.exp(gs-gs.max(axis=-1)[:,:,:,np.newaxis])
-post_like /= post_like.sum(axis = -1)[:,:,:,np.newaxis]
-
-#get response outcomes in the post-reversal phase
-obs = inp[np.newaxis, last:, :, 0]
-
-#compute observation likelihood for each posterior sample
-post_ol = post_like[:,:,:,0]**(1-obs)*post_like[:,:,:,1]**obs
-
-#compute mean likelihood over all samples
-mean_pl = post_ol.prod(axis = 1).mean(axis = 0)
-
-#get posterior predictive log model evidence
-pplme = np.log(mean_pl)
-
-#get mean probability for each subject of slecting stimuli 2
-plike2 = post_like[:,:,:,1].mean(axis = 0)
+varnames = ['beta', 'delta', 'r']
+sample, pplme, plike2 = sample_from_posterior(approx, 
+                                              varnames, 
+                                              n_subs,
+                                              inp[last:,:,0], 
+                                              last)
 
 store = pd.HDFStore('results.h5')
-store['edhmm/trace'] = data
+store['edhmm/trace'] = sample
 store['edhmm/pplme'] = pd.Series(pplme)
 store['edhmm/plike2'] = pd.DataFrame(plike2)
 store.close()

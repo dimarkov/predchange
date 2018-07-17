@@ -1,17 +1,23 @@
 """This module contains the class that defines the interaction between
 different modules that govern agent's behavior.
 """
+from __future__ import division
 import numpy as np
-from itertools import product
 
 class BayesianReversalLearner(object):
     
     def __init__(self, transition_matrix, 
                  prior_states = None, 
                  prior_durations = None, 
-                 prior_policies = None, 
+                 prior_policies = None,
+                 tau = 1e-10,
                  blocks = 1, T = 100, 
                  number_of_choices = 2):
+        
+        self.blocks = blocks
+        self.T = T
+        
+        self.tau = tau #response noise
         
         #set parameters of the agent
         self.ns = transition_matrix.shape[0]
@@ -83,9 +89,6 @@ class BayesianReversalLearner(object):
                                              sd_post)
             self.ab_post[:, t+1] = ab_post 
         
-    def plan_behavior(self, t):
-        pass
-
     
     def generate_responses(self, t):
         thetas = self.sd_post[:,t].sum(axis = -1)[:,0]
@@ -97,22 +100,29 @@ class BayesianReversalLearner(object):
         exp_rew[:,1] += (1-thetas)*mus[:,0,0]
 
         values = 2*exp_rew - 1
-        responses = values.argmax(axis = -1)
-        equal_values = values[:,0] == values[:, 1]
-        responses[equal_values] = (np.random.rand(equal_values.sum()) > .5).astype(int)
-        return responses
+        
+        #get response probability
+        dv = values.T-values.max(axis=-1)
+        res_prob = np.exp(dv/self.tau)
+        res_prob /= res_prob.sum(axis=0)
+        
+        return (np.random.rand(self.blocks) > res_prob[0]).astype(int)
 
 
 class RLReversalLearner(object):
     
-    def __init__(self, alpha, kappa,
+    def __init__(self, alpha, kappa, tau=1e-10,
                  init_values = None,
                  number_of_choices = 2,
                  blocks = 1, T = 100, 
                  **kwargs):
         
+        self.blocks = blocks
+        self.T=T
+        
         self.alpha = alpha
         self.kappa = kappa
+        self.tau = tau
         
         #set initial value vector
         self.values = np.zeros((blocks, T, number_of_choices))
@@ -124,7 +134,7 @@ class RLReversalLearner(object):
         #update choice values
         values = self.values[:, t]
         
-        blocks = values.shape[0]
+        blocks = self.blocks
         o = 2*observations - 1
         v1 = values[range(blocks), responses] 
         v2 = values[range(blocks), 1-responses]
@@ -133,11 +143,11 @@ class RLReversalLearner(object):
             self.values[range(blocks),t+1, responses] = v1 + self.alpha*(o - v1)
             self.values[range(blocks),t+1, 1-responses] = v2 + self.alpha*self.kappa*(-o - v2)
         
-    def plan_behavior(self, t):
-        pass
     
     def generate_responses(self, t):
-        responses = self.values[:,t].argmax(axis = -1)
-        equal_values = self.values[:,t,0] == self.values[:,t,1]
-        responses[equal_values] = (np.random.rand(equal_values.sum()) > .5).astype(int)
-        return responses
+        #get response probability
+        dv = self.values[:,t].T-self.values[:,t].max(axis=-1)
+        res_prob = np.exp(dv/self.tau)
+        res_prob /= res_prob.sum(axis=0)
+        
+        return (np.random.rand(self.blocks) > res_prob[0]).astype(int)

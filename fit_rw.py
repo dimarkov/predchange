@@ -15,12 +15,12 @@ import theano.tensor as tt
 from pymc3 import Model, fit, trace_to_dataframe
 from pymc3 import Deterministic, HalfCauchy, Categorical
 
-from theano_models import rw_model
+from theano_models import durw_model
 
 import numpy as np
-import seaborn as sns
-
 import pandas as pd
+
+from stats import sample_from_posterior
 
 f = []
 for (dirpath, dirnames, filenames) in walk('data'):
@@ -56,18 +56,18 @@ for i,file in enumerate(f):
     inp[:,i,:] = data.values
 
 
-#define the hierarchical models
+#define the hierarchical model
 with Model() as dual_model:
 
     #set hierarchical priors for learning rates
     atau = HalfCauchy('atau', beta = 1)
     aloc = HalfCauchy('aloc', beta = atau, shape = (n_subs,))
-    alpha = Deterministic('alpha', aloc/(1+aloc)) 
+    alpha = Deterministic('alpha', 1/(1+(aloc)**2)) 
     
     #set hierarchical priors for coupling strengths
     ktau = HalfCauchy('ktau', beta = 1)
     kloc = HalfCauchy('kloc', beta = ktau, shape = (n_subs,))
-    kappa = Deterministic('kappa', kloc/(1+kloc))
+    kappa = Deterministic('kappa', 1/(1+(kloc)**2))
 
     #set hierarchical priors for response noises   
     btau = HalfCauchy('btau', beta = 1)
@@ -75,15 +75,15 @@ with Model() as dual_model:
     beta = Deterministic('beta', 1/bloc)
     
     #set hierarchical priors for initial choice value
-    mtau = HalfCauchy('mtau', beta = 1)
-    mlocA = HalfCauchy('mlocA', beta = mtau, shape = (n_subs,))
-    mlocB = HalfCauchy('mlocB', beta = mtau, shape = (n_subs,))
-    muA = Deterministic('muA', mlocA/(1+mlocA)) 
-    muB = Deterministic('muB', 1/(1+mlocB)) 
-    V0 = tt.stacklists([2*muA -1, 2*muB -1]).T
+#    mtau = HalfCauchy('mtau', beta = 1)
+#    mlocA = HalfCauchy('mlocA', beta = mtau, shape = (n_subs,))
+#    mlocB = HalfCauchy('mlocB', beta = mtau, shape = (n_subs,))
+#    muA = Deterministic('muA', mlocA/(1+mlocA)) 
+#    muB = Deterministic('muB', 1/(1+mlocB)) 
+    V0 = tt.zeros((n_subs,2)) #tt.stacklists([2*muA -1, 2*muB -1]).T
     
     #compute the choice values
-    (Q, _) = scan(rw_model, sequences = [inp],
+    (Q, _) = scan(durw_model, sequences = [inp],
                  outputs_info = V0,
                  non_sequences = [alpha, kappa, range(n_subs)],
                  name = 'rw')
@@ -92,9 +92,9 @@ with Model() as dual_model:
     V = Deterministic('V', tt.concatenate([V0, Q[:-1]]))
     
     #set hierarchical prior for response biases
-    ctau = HalfCauchy('ctau', beta = 1)
-    cloc = HalfCauchy('cloc', beta = ctau, shape = (n_subs,))
-    c0 = Deterministic('c0', cloc/(1+cloc))
+    #ctau = HalfCauchy('ctau', beta = 1)
+    #cloc = HalfCauchy('cloc', beta = ctau, shape = (n_subs,))
+    c0 = tt.ones(n_subs)/2 #Deterministic('c0', cloc/(1+cloc))
 
     #compute response noise and response bias modulated response values
     G = Deterministic('G', beta[None,:, None]*V + log([c0, 1-c0]).T[None, :, :])
@@ -109,44 +109,16 @@ with Model() as dual_model:
 #fit the model    
 with dual_model:
      approx = fit(method = 'advi', n = 50000, progressbar = True)
-
-#sample from posterior
-nsamples = 1000
-trace = approx.sample(nsamples, include_transformed = True)
-
-data = trace_to_dataframe(trace, include_transformed=True, 
-                          varnames=['ctau', 'c0', 
-                                    'mtau', 'muA', 'muB', 
-                                    'btau', 'beta',
-                                    'ktau', 'kappa', 
-                                    'atau', 'alpha'])
-
-#get posterior samples of the predicted response value in the postreversal phase
-Gs = np.zeros((10000, 35, n_subs, 2))
-for i in range(10):
-    trace = approx.sample(nsamples, include_transformed = True)
-    Gs[i*1000:(i+1)*1000] = trace['G'][:,last:]
-
-post_like = np.exp(Gs-Gs.max(axis=-1)[:,:,:,None])
-post_like /= post_like.sum(axis = -1)[:,:,:,None]
-
-#get response outcomes in the post-reversal phase
-obs = inp[None, last:, :, 0]
-
-#compute observation likelihood for each posterior sample
-post_ol = post_like[:,:,:,0]**(1-obs)*post_like[:,:,:,1]**obs
-
-#compute mean likelihood over all samples
-mean_pl = post_ol.prod(axis = 1).mean(axis = 0)
-
-#get posterior predictive log model evidence
-pplme = np.log(mean_pl)
-
-#get mean probability of selecting stimuli 2
-plike2 = post_like[:,:,:,1].mean(axis = 0)
+     
+varnames = ['beta', 'alpha', 'kappa']
+sample, pplme, plike2 = sample_from_posterior(approx, 
+                                              varnames, 
+                                              n_subs,
+                                              inp[last:,:,0], 
+                                              last)
 
 store = pd.HDFStore('results.h5')
-store['durw/trace'] = data
+store['durw/trace'] = sample
 store['durw/pplme'] = pd.Series(pplme)
 store['durw/plike2'] = pd.DataFrame(plike2)
 store.close()

@@ -1,6 +1,6 @@
 import theano.tensor as tt
 
-def rw_model(inp, v, alpha, kappa, l_subs):
+def durw_model(inp, v, alpha, kappa, l_subs):
     """ Theano implementation of DU-RW model.
 
         inp -> input variable containing choices, 

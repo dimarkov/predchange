@@ -21,36 +21,7 @@ from theano_models import edhmm_model, durw_model
 import numpy as np
 import pandas as pd
 
-def sample_from_posterior(approx, varnames, n_subs, responses):
-    #sample from posterior
-    nsample = 1000
-    trace = approx.sample(nsample, include_transformed = True)
-    
-    sample = trace_to_dataframe(trace, include_transformed=True, 
-                              varnames=varnames)
-        
-    #get posterior samples of the predicted response value in the postreversal phase
-    gs = np.zeros((10000, 35, n_subs, 2))
-    for i in range(10):
-        trace = approx.sample(nsample, include_transformed = False)
-        gs[i*1000:(i+1)*1000] = trace['G'][:,last:]
-    
-    post_like = np.exp(gs-gs.max(axis=-1)[:,:,:,None])
-    post_like /= post_like.sum(axis = -1)[:,:,:,None]
-    
-    #measured responses in the post-reversal phase
-    res = responses[None,:]
-    
-    #compute observation likelihood for each posterior sample
-    post_ol = post_like[:,:,:,0]**(1-res)*post_like[:,:,:,1]**res
-    
-    #get posterior predictive log model evidence
-    pplme = np.log(post_ol.prod(axis = 1).mean(axis = 0))
-    
-    #get per subject mean probability of selecting stimuli 2
-    plike2 = post_like[:,:,:,1].mean(axis = 0)
-    
-    return sample, pplme, plike2 
+from stats import sample_from_posterior
 
 behavior = np.load('simulated_behavior.npy')
 d_max = 100
@@ -202,7 +173,8 @@ varnames = pars + ['delta', 'r']
 sample, pplme, plike2 = sample_from_posterior(approx, 
                                               varnames, 
                                               n_subs,
-                                              inp[last:,:,0])
+                                              inp[last:,:,0], 
+                                              last)
 store = pd.HDFStore('simulation_fits.h5')
 store['edhmm/trace'] = sample
 store['edhmm/pplme'] = pd.Series(pplme)
@@ -217,7 +189,8 @@ varnames = pars + ['kappa', 'alpha']
 sample, pplme, plike2 = sample_from_posterior(approx, 
                                               varnames, 
                                               n_subs,
-                                              inp[last:,:,0])
+                                              inp[last:,:,0],
+                                              last)
 store = pd.HDFStore('simulation_fits.h5')
 store['durw/trace'] = sample
 store['durw/pplme'] = pd.Series(pplme)

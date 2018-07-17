@@ -15,15 +15,24 @@ import theano.tensor as tt
 import seaborn as sns
 import matplotlib.pyplot as plt
 
+from matplotlib.collections import PatchCollection
+from matplotlib.patches import Rectangle
+
 sns.set(context='talk', style = 'white', palette='muted', color_codes = True)
 
-#load the modle fitting results
-store = pd.HDFStore('results.h5')
+simulated = True #model comparison for simulated data
 
-num_sub = 22 #number of subjects
-LME = pd.DataFrame(index = range(num_sub))
+#load the modle fitting results
+if simulated:
+    store = pd.HDFStore('simulation_fits.h5')
+else:
+    store = pd.HDFStore('behavior_fits.h5')
+
+#uncomment when comparing models on simulated data
 
 cols = ['DU-RW', 'ED-HMM']
+LME = pd.DataFrame(columns = cols)
+
 
 LME['DU-RW'] = store['durw/pplme']
 LME['ED-HMM'] = store['edhmm/pplme']
@@ -44,9 +53,12 @@ def logp_mix(mf):
 
 # define and fit the probabilistic model
 with Model() as model:
-    tau = HalfCauchy('tau', beta = 1)
+    tau = HalfCauchy('tau', beta = .5)
+    
     mf = Dirichlet('mf', a = tt.ones(M)/tau, shape=(M,))
     xs = DensityDist('logml', logp_mix(mf), observed=LME)
+
+with model:    
     approx = fit(method='advi', n = 10000)
     
 trace = approx.sample(nsample)    
@@ -59,16 +71,14 @@ ep = pd.DataFrame({'ep':ep/nsample, 'models': cols})
 
 fig = plt.figure(figsize = (10,5))
 ax1 = plt.subplot(121)
-ax3 = plt.subplot(122)
+ax2 = plt.subplot(122)
 
 # plot pdf of posterior model probability
 sns.kdeplot(trace['mf'][:,1], color = 'b', shade = True, ax = ax1);
 ax1.vlines(.5, ymin = 0, ymax = 2.75, color = 'k', linestyle = '--', alpha = 0.5, zorder = 1);
-ax1.set_ylim([0,3])
 sns.despine(ax = ax1)
 ax1.set_ylabel('density')
 ax1.set_xlabel('posterior probability')
-ax1.text(-.35,3,'A')
 
 # compute model attribution
 nlme = LME + np.log(trace['mf']).mean(axis = 0)
@@ -79,7 +89,27 @@ p /= p.sum(axis = 1)[:,np.newaxis]
 index = pd.Index(data = np.arange(1,len(p)+1), name = 'participant')
 columns = pd.Index(data = cols, name = 'models')
 dp = pd.DataFrame(data = p, index = index, columns = columns)
-sns.heatmap(dp, vmin=0, vmax=1, cmap = 'viridis', ax = ax3);
-ax3.set_title('model attribution');
-ax3.text(-.35,22, 'B')
-fig.savefig('Fig7.pdf', bbox_inches = 'tight', transparent = True)
+sns.heatmap(dp, vmin=0, vmax=1, cmap = 'viridis', ax = ax2);
+ax2.set_title('model attribution');
+ax2.text(-.35,N, 'B')
+
+# mark subjects with higher attribution from ED-HMM
+if not simulated:
+    ax1.set_ylim([0,3])
+    ax1.text(-.35,3,'A')
+
+    rects = []
+    for y in [4,11]:
+        rects.append(Rectangle((0, y),2,1,fill=False,alpha=1,color='r',lw =3))
+    for y in [13,18]:
+        rects.append(Rectangle((0, y),2,2,fill=False,alpha=1,color='r',lw =3))
+    pc = PatchCollection(rects, facecolor='none',edgecolor='r',lw=2)
+    ax2.add_collection(pc)
+
+    fig.savefig('Fig7.pdf', bbox_inches = 'tight', transparent = True)
+else:
+    ax1.set_ylim([0,3.5])
+    ax1.text(-.35,3.5,'A')
+
+    ax2.set_yticks([1, 10, 20, 30, 40, 50, 60, 70, 80], minor = False)
+    ax2.set_yticklabels(['80',  '70', '60', '50', '40', '30', '20', '10', '1'])

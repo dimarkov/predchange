@@ -60,9 +60,10 @@ def plot_between_reversal_interval_distribution(axes):
 def plot_mean_performance_lines(axes, performance):
     means = arange(10,31)
     c = ['b', 'g']
+    labels = ['IRIM', 'RRIM']
     for i in range(2):
         for j in range(2):
-            axes[i].plot(means, percentile(performance[i,j], 50, axis = -1), c[j])
+            axes[i].plot(means, percentile(performance[i,j], 50, axis = -1), c[j], label = labels[j])
             p95 = percentile(performance[i,j], 95, axis = -1)
             p05 = percentile(performance[i,j], 5, axis = -1)
             p75 = percentile(performance[i,j], 75, axis = -1)
@@ -71,6 +72,7 @@ def plot_mean_performance_lines(axes, performance):
             axes[i].fill_between(means, p95, p05, alpha = .1, color = c[j])
             
     
+    axes[1].legend()
     axes[0].set_ylabel('performance')
     axes[0].set_xlabel(r'$\mu$')
     axes[1].set_xlabel(r'$\mu$')
@@ -107,7 +109,7 @@ def plot_probability_correct_choice1(axes, choice_probability):
         axes[i].vlines(0, 0,1, color = 'k', linestyle = '--')
         axes[i].set_xlabel('relative trial number')
         axes[i].set_xlim([-10, 10])
-        sns.despine(axes[i])
+#        sns.despine(axes[i])
         for j in range(2):
             for k in range(3):
                 line,=axes[i].plot(rel_trial, 
@@ -120,8 +122,8 @@ def plot_probability_correct_choice1(axes, choice_probability):
     axes[1].set_yticklabels([])
     axes[0].set_ylabel('Pr(choice=correct)')
     
-    legend1 = axes[0].legend(handles=lines[:3], title='HMM', fontsize = 10)
-    legend2 = axes[1].legend(handles=lines[-3:], title='ED-HMM', fontsize = 10)
+    legend1 = axes[0].legend(handles=lines[:3], title='IRIM', fontsize = 10)
+    legend2 = axes[1].legend(handles=lines[-3:], title='RRIM', fontsize = 10)
     
     plt.setp(legend1.get_title(),fontsize=10)
     plt.setp(legend2.get_title(),fontsize=10)
@@ -151,14 +153,15 @@ def plot_stats(performance, choice_probability, boxplot = False):
     fig, axes = make_figure_with_subplots()
     
     plot_between_reversal_interval_distribution(axes[0,:])
-    
+
     if boxplot:
-        labels = ['HMM', 'ED-HMM', 'SU-RW', 'DU-RW']
+        labels = ['IRIM', 'RRIM', 'SU-RW', 'DU-RW']
         plot_mean_performance_boxplot(axes[1,:], performance, labels)
         plot_probability_correct_choice2(axes[2,:], choice_probability, labels)
         
     else:
+        labels = [r'$\mu = 10$', r'$\mu = 20$', r'$\mu = 0$']
         plot_mean_performance_lines(axes[1,:], performance)
-        plot_probability_correct_choice2(axes[2,:], choice_probability, labels)
+        plot_probability_correct_choice1(axes[2,:], choice_probability)
     
     return fig

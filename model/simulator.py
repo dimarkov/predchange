@@ -27,8 +27,6 @@ class Simulator(object):
         """
         for t in range(self.T):
             #update single trial
-            self.agent.plan_behavior(t)
-        
             res = self.agent.generate_responses(t)
         
             obs = self.environment.generate_observations(t, res)
