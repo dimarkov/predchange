@@ -45,7 +45,7 @@ def generate_behavior(agent_label, task, mu, d, state_transition_matrix):
         agent = RLReversalLearner(alpha, kappa, blocks = blocks, T = T)
 
     else:
-        if agent_label == 'ED-HMM':
+        if agent_label == 'RRI':
             sigma = mu
         else:
             sigma = mu*(mu-1)
@@ -131,7 +131,7 @@ for i,env in enumerate(['irregular', 'semi-regular']):
     task = RevLearn(O, S, D, blocks = blocks, T = T)
     task.set_hidden_states()
     
-    for j,q in enumerate(['HMM', 'ED-HMM']):
+    for j,q in enumerate(['IRI', 'RRI']):
         for k, mean in enumerate(np.arange(10,31)):
             correct_choices, responses, hidden_states = \
                 generate_behavior(q, task, mean, d, state_transition_matrix)
@@ -143,12 +143,13 @@ for i,env in enumerate(['irregular', 'semi-regular']):
 #plot stats    
 fig1 = plot_stats(performance, choice_prob)
 fig1.savefig('Fig5.pdf', bbox_inches = 'tight', transparent = True)
+fig1.savefig('Fig5.png', bbox_inches = 'tight', transparent = True, dpi = 600)
 
 ###############################################################################
 
 
 ####################run simulations for all agents############################# 
-labels = np.array(['HMM', 'ED-HMM', 'SU', 'DU'])
+labels = np.array(['IRI', 'RRI', 'SU', 'DU'])
 performance = np.zeros((2,len(labels),blocks))
 choice_prob = np.zeros((2,len(labels),21))
 
@@ -177,4 +178,7 @@ for i,s in enumerate(['irregular', 'semi-regular']):
 
 ##plot stats
 fig2 = plot_stats(performance, choice_prob, boxplot=True)
+
+fig2.savefig('Fig6.pdf', bbox_inches = 'tight', transparent = True)
+fig2.savefig('Fig6.png', bbox_inches = 'tight', transparent = True, dpi = 600)
 

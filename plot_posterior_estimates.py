@@ -3,8 +3,8 @@
 
 """
 Script for plotting posterior estimate of prior beliefs over between
-reversal intervals, effective change probability, divergence from 
-geometric distribution.
+reversal intervals, effective change probability, and the probability that 
+the posterior estimate of r is larger than 1.5.
 """
 import pandas as pd
 import numpy as np
@@ -47,19 +47,20 @@ for i in range(n_samples):
         geometric = neg_binomial(dlt,1,d,transformed = False)
         divs[i,j] = kl_div(geometric, p0d[i,j])
 
-fig1, ax = plt.subplots(2,1, figsize = (12,6), sharex=True)   
-probs = np.sum(rs.values > 1.3, axis=0)/n_samples
-ax[0].bar(np.arange(22), probs, color = '#72B2F2')     
-sns.boxplot(data = pd.DataFrame(divs, columns = range(1,23)), 
-                                color = '#72B2F2', 
-                                ax = ax[1],
-                                linewidth = 1.5)
-ax[0].set_ylabel(r'$Pr(r>1.3)$')
-ax[1].set_xlabel('subject')
-ax[1].set_ylabel(r'$D_{KL}$')
+fig1, ax = plt.subplots(1,1, figsize = (12,3), sharex=True)   
+probs = np.sum(rs.values > 1.5, axis=0)/n_samples
+ax.bar(np.arange(1,23), probs, color = '#72B2F2')
+
+ax.set_xticks(np.arange(1,23))
+       
+ax.set_xlim([.5, 22.5])
+ax.set_ylabel(r'$Pr(r>1.5)$')
+ax.set_xlabel('participant')
 sns.despine(fig = fig1)
 
-#fig1.savefig('Fig10.pdf', bbox_inches = 'tight', transparent = True)
+
+
+fig1.savefig('Fig13.pdf', bbox_inches = 'tight', transparent = True)
 
 mpd = np.zeros((d_max, n_subs))
 for j in range(n_subs):
@@ -112,6 +113,8 @@ for j, ax in enumerate(axs):
     ax.set_title('Participant %d' % subjects[j])
     ax.set_xlim([1,T])
     if j>2:
-        ax.set_xlabel(r'$d$')
+        ax.set_xlabel(r'$\tau$')
     if j == 0 or j == 3:
         ax.set_ylabel(r'$\delta_\tau$')
+        
+fig2.savefig('Fig12.pdf', bbox_inches = 'tight', transparent = True)

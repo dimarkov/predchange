@@ -12,18 +12,18 @@ import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 
 sns.set(context = 'talk', style = 'white', color_codes=True)
+sns.set_palette(['#e41a1c', '#377eb8', '#4daf4a', '#984ea3', '#ff7f00'])
 
 def make_figure_with_subplots():
     
-    fig = plt.figure(figsize = (15,8))
-    heights = [1, 2, 2]
-    grids = GridSpec(ncols = 2, nrows =3, height_ratios = heights)
-    axes = empty((3,2), dtype = object)
-    for i in range(3):
+    fig = plt.figure(figsize = (14,8))
+    grids = GridSpec(ncols = 2, nrows =2)
+    axes = empty((2,2), dtype = object)
+    for i in range(2):
         for j in range(2):
             axes[i,j] = fig.add_subplot(grids[i,j])
     
-    fig.subplots_adjust(wspace = .1, hspace = .6)
+    fig.subplots_adjust(wspace = .1, hspace = .3)
     
     return fig, axes
 
@@ -33,34 +33,31 @@ def plot_between_reversal_interval_distribution(axes):
     mu = 20
     sigma = mu*(mu-1)
     p0 = neg_binomial(mu, sigma, d)
-    axes[0].bar(arange(d_max)+1, p0, alpha = 0.5)
+    axes[0].bar(arange(d_max)+1, p0, color = 'r', alpha = 0.5)
     
     sigma = mu
     p0 = neg_binomial(mu, sigma, d)
-    axes[1].bar(arange(d_max)+1, p0, alpha = 0.5)
+    axes[1].bar(arange(d_max)+1, p0, color = 'b', alpha = 0.5)
 
     axes[0].vlines(20, 0, 0.1, color = 'k', linestyle = '--', label = r'$\mu$')
-    axes[1].vlines(20, 0, 0.1, color = 'k', linestyle = '--', label = r'$\mu$')
+    axes[1].vlines(20, 0, 0.1, color = 'k', linestyle = '--')
     
     axes[0].set_xlim([1,50])
     axes[1].set_xlim([1,50])
     axes[0].legend()
     axes[1].legend()
-    axes[0].set_title('irregular reversals')
-    axes[1].set_title('semi-regular reversals')
 
     axes[0].set_ylabel(r'$p_0(d)$')
-    axes[0].set_xlabel(r'$d$')
+    axes[1].set_ylabel(r'$p_0(d)$')
     axes[1].set_xlabel(r'$d$')
-    axes[1].set_yticklabels([])
     
     sns.despine(ax=axes[0])
     sns.despine(ax=axes[1])
     
 def plot_mean_performance_lines(axes, performance):
     means = arange(10,31)
-    c = ['b', 'g']
-    labels = ['IRIM', 'RRIM']
+    c = ['r', 'b']
+    labels = ['IRI', 'RRI']
     for i in range(2):
         for j in range(2):
             axes[i].plot(means, percentile(performance[i,j], 50, axis = -1), c[j], label = labels[j])
@@ -81,6 +78,9 @@ def plot_mean_performance_lines(axes, performance):
     axes[0].set_ylim([.5, 1.])
     axes[1].set_ylim([.5, 1.])
     axes[1].set_yticklabels([])
+    
+    axes[1].set_xticks([10, 15, 20, 25, 30])
+    axes[0].set_xticks([10, 15, 20, 25, 30])
 
 import pandas as pd    
 def plot_mean_performance_boxplot(axes, performance, labels):
@@ -99,7 +99,7 @@ def plot_mean_performance_boxplot(axes, performance, labels):
             
     
 def plot_probability_correct_choice1(axes, choice_probability):
-    c = ['b','g']
+    c = ['#e41a1c', '#377eb8']
     rel_trial = arange(-10, 11)
     locs = [0, 10, 20]
     styles = [':', '-', '--']
@@ -122,11 +122,14 @@ def plot_probability_correct_choice1(axes, choice_probability):
     axes[1].set_yticklabels([])
     axes[0].set_ylabel('Pr(choice=correct)')
     
-    legend1 = axes[0].legend(handles=lines[:3], title='IRIM', fontsize = 10)
-    legend2 = axes[1].legend(handles=lines[-3:], title='RRIM', fontsize = 10)
+    legend1 = axes[0].legend(handles=lines[:3], title='IRI', fontsize = 10)
+    legend2 = axes[1].legend(handles=lines[-3:], title='RRI', fontsize = 10)
     
     plt.setp(legend1.get_title(),fontsize=10)
     plt.setp(legend2.get_title(),fontsize=10)
+    
+    axes[1].set_xticks([-10, -5, 0, 5, 10])
+    axes[0].set_xticks([-10, -5, 0, 5, 10])
 
 def plot_probability_correct_choice2(axes, choice_probability, labels):
     rel_trial = arange(-10, 11)
@@ -147,21 +150,25 @@ def plot_probability_correct_choice2(axes, choice_probability, labels):
     
     axes[0].legend(fontsize = 10)
     axes[1].legend(fontsize = 10)
+    
+    axes[1].set_xticks([-10, -5, 0, 5, 10])
+    axes[0].set_xticks([-10, -5, 0, 5, 10])
      
 def plot_stats(performance, choice_probability, boxplot = False):
     
     fig, axes = make_figure_with_subplots()
     
-    plot_between_reversal_interval_distribution(axes[0,:])
-
     if boxplot:
-        labels = ['IRIM', 'RRIM', 'SU-RW', 'DU-RW']
-        plot_mean_performance_boxplot(axes[1,:], performance, labels)
-        plot_probability_correct_choice2(axes[2,:], choice_probability, labels)
+        labels = ['IRI', 'RRI', 'SU-RW', 'DU-RW']
+        plot_mean_performance_boxplot(axes[0,:], performance, labels)
+        plot_probability_correct_choice2(axes[1,:], choice_probability, labels)
         
     else:
         labels = [r'$\mu = 10$', r'$\mu = 20$', r'$\mu = 0$']
-        plot_mean_performance_lines(axes[1,:], performance)
-        plot_probability_correct_choice1(axes[2,:], choice_probability)
+        plot_mean_performance_lines(axes[0,:], performance)
+        plot_probability_correct_choice1(axes[1,:], choice_probability)
+        
+    axes[0,0].set_title('irregular reversals')
+    axes[0,1].set_title('semi-regular reversals')
     
     return fig

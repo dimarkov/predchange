@@ -7,8 +7,8 @@ Model comparison of dual update RW and ED-HMM models
 import pandas as pd
 import numpy as np
 
-from pymc3 import Model, fit, logsumexp, traceplot, sample, plot_posterior
-from pymc3 import DensityDist, Dirichlet, Bernoulli, Deterministic, HalfCauchy, Gamma, Categorical, InverseGamma, Beta
+from pymc3 import Model, fit, logsumexp, traceplot
+from pymc3 import DensityDist, Dirichlet, HalfCauchy
 
 import theano.tensor as tt
 
@@ -47,13 +47,13 @@ def logp_mix(mf):
         logps = tt.log(mf) + value
 
         return tt.sum(logsumexp(logps, axis=1))
-
+        
     return logp_
 
 
 # define and fit the probabilistic model
 with Model() as model:
-    tau = HalfCauchy('tau', beta = .5)
+    tau = HalfCauchy('tau', beta = 1.)
     
     mf = Dirichlet('mf', a = tt.ones(M)/tau, shape=(M,))
     xs = DensityDist('logml', logp_mix(mf), observed=LME)
@@ -106,10 +106,13 @@ if not simulated:
     pc = PatchCollection(rects, facecolor='none',edgecolor='r',lw=2)
     ax2.add_collection(pc)
 
-    fig.savefig('Fig7.pdf', bbox_inches = 'tight', transparent = True)
+    fig.savefig('Fig9.pdf', bbox_inches = 'tight', transparent = True)
 else:
     ax1.set_ylim([0,3.5])
     ax1.text(-.35,3.5,'A')
 
     ax2.set_yticks([1, 10, 20, 30, 40, 50, 60, 70, 80], minor = False)
     ax2.set_yticklabels(['80',  '70', '60', '50', '40', '30', '20', '10', '1'])
+    
+    print('number of simulated subjects classified as ED-HMM:', \
+          (p[:,0] < p[:,1]).reshape(4,-1).sum(axis = -1))

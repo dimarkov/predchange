@@ -44,11 +44,13 @@ for i,file in enumerate(f[:n_subjects]):
 from scipy.special import betaincinv
 #du-rw group
 subs1 = np.array([0,1,4,5,6,9,11,12,13,14,15,16,18,19,20,21])
+
 nans1 = np.isnan(responses[subs1, :]).sum(axis = 0)
 p1 = np.nan_to_num(responses[subs1, :]).sum(axis = 0)
 
 #edhmm group
 subs2 = np.array([2,3,7,8,10,17])
+
 nans2 = np.isnan(responses[subs2, :]).sum(axis = 0)
 p2 = np.nan_to_num(responses[subs2, :]).sum(axis = 0)
 
@@ -110,4 +112,5 @@ ax[1].set_xlabel('trial')
 ax[0].text(-0.16,1,'A', transform = ax[0].transAxes)
 ax[1].text(-0.2,1,'B',transform = ax[1].transAxes)
 fig.subplots_adjust(wspace=.25)
-fig.savefig('Fig8.pdf', bbox_inches = 'tight', transparent = True)
+
+fig.savefig('Fig10.pdf', bbox_inches = 'tight', transparent = True)

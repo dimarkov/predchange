@@ -27,9 +27,6 @@ for k in range(1,d_max):
 fig1, ax1 = plt.subplots(figsize = (10,5))
 fig2, ax2 = plt.subplots(figsize = (10,5))
 
-ax1.vlines(20, 0 ,.15, color = 'k', linestyle='--', label = r'$\mu$')
-ax2.vlines(20, 0 ,.09, color = 'k', linestyle='--', label = r'$\mu$')
-
 delta_df = pd.DataFrame()
 mu = 20
 labels = [r'$\sigma = \mu$', r'$\sigma = 10\mu$', r'$\sigma = (\mu-1)\mu$']
@@ -57,5 +54,5 @@ ax1.spines['right'].set_visible(False)
 ax2.spines['top'].set_visible(False) 
 ax2.spines['right'].set_visible(False)
 
-fig1.savefig('Fig2.pdf', bbox_inches = 'tight', transparent = True)
-fig2.savefig('Fig1.pdf', bbox_inches = 'tight', transparent = True)
+fig1.savefig('Fig4.pdf', bbox_inches = 'tight', transparent = True)
+fig2.savefig('Fig3.pdf', bbox_inches = 'tight', transparent = True)

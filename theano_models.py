@@ -12,7 +12,7 @@ def durw_model(inp, v, alpha, kappa, l_subs):
     """
 
     r = inp[:,0] # response/choice in current trial for all subjects
-    o = inp[:,1] # reward outcome of current choice for all subjects
+    o = 2*inp[:,1]-1 # reward outcome of current choice for all subjects
     t = inp[:,2] # a control variable which prevents update in case of nan trials
 
     v = tt.set_subtensor(v[l_subs, r], v[l_subs, r] \

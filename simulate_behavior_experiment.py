@@ -11,20 +11,20 @@ from stats import neg_binomial
 
 def generate_behavior(agent_label, task, state_transition_matrix):
     
-    if agent_label == 'DU':
+    if agent_label == 'DU-RW':
         alpha = .25
         kappa = 1.
         
         agent = RLReversalLearner(alpha, kappa, tau=.25, blocks = blocks, T = T)
     
-    elif agent_label == 'SU':
+    elif agent_label == 'SU-RW':
         alpha = .25
         kappa = 0
         
         agent = RLReversalLearner(alpha, kappa, tau=.25, blocks = blocks, T = T)
 
     else:
-        if agent_label == 'ED-HMM':
+        if agent_label == 'RRI':
             delta = 1/6
             r = 20*delta/(1-delta)
         else:
@@ -46,7 +46,7 @@ def generate_behavior(agent_label, task, state_transition_matrix):
     
         prior_states = {}
         psd = np.zeros((ns, d_max)) #prior over state durations
-        psd[:,0] = 1
+        psd[:,:] = duration_transition_matrix[:,0][None,:]
         psd /= psd.sum()
         # set the same state duration priors over all experimental blocks (simulated subjects)
         prior_states['sd'] = np.asarray([psd]*blocks)
@@ -69,7 +69,7 @@ def generate_behavior(agent_label, task, state_transition_matrix):
     return correct_choices, responses, outcomes
     
 
-blocks = 25 #number of experimental blocks for each model
+blocks = 1000 #number of experimental blocks for each model
 T = 160 #number of trials for each experimental block
 
 ns = 2 #number of states
@@ -100,36 +100,35 @@ state_transition_matrix[:,:,1:] = np.eye(ns)[:,:,None]
 # duration probability is not relevant for simulations, fixed to unifrom dist.
 D = np.ones(T)/T
 
-store = pd.HDFStore('results.h5')
+store = pd.HDFStore('behavior_fits.h5')
 hidden_states = store['hidden_states'].values
+store.close()
 
 #set task environments with fixed hidden states within each block
 task = RevLearn(O, S, D, blocks = blocks, T = T)
 task.set_hidden_states(hidden_states=hidden_states[None,:, None])
 
 ####################run simulations for all agents############################# 
-labels = np.array(['HMM','ED-HMM','SU','DU'])
+labels = np.array(['IRI', 'RRI', 'SU-RW', 'DU-RW'])
 performance = np.zeros((2,len(labels),blocks))
 choice_prob = np.zeros((2,len(labels),21))
 
-mean_response = np.zeros((4, T))
-behavior = np.zeros((T, 4*blocks, 2))
+mean_response = np.zeros((T, 4))
+subsample = 25
+behavior = np.zeros((T, 4*subsample, 2))
+
 for i, label in enumerate(labels):
     
     correct_choices, responses, outcomes =\
             generate_behavior(label, task, state_transition_matrix)
     
-    behavior[:, i*blocks:(i+1)*blocks, 0] = responses.T
-    behavior[:, i*blocks:(i+1)*blocks, 1] = outcomes.T
-        
+    locs = np.random.randint(0, high = blocks, size = subsample)
+    behavior[:, i*subsample:(i+1)*subsample, 0] = responses.T[:,locs]
+    behavior[:, i*subsample:(i+1)*subsample, 1] = outcomes.T[:,locs]
+    
+    mean_response[:,i] =  correct_choices.mean(axis = 0)   
     print(label,' ', np.median(correct_choices.mean(axis = -1)))
-    mean_response[i] = correct_choices.mean(axis = 0)
 
-store.close()
-
-import matplotlib.pyplot as plt
-import seaborn as sns
-sns.set_palette('Set2', 8)
-
-plt.plot(mean_response.T)
-np.save('simulated_behavior.npy', behavior)
+#uncomment to overwite the files with new data
+#np.save('mean_responses_exp.npy', mean_response)
+#np.save('simulated_behavior.npy', behavior)
