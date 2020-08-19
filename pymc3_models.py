@@ -16,7 +16,7 @@ from pymc3 import Deterministic, HalfCauchy, Categorical
 
 from theano_models import durw_model, edhmm_model
 
-def durw_fit(inp, nans, n_subs, last):
+def durw_fit(inp, nans, n_subs, last, method='advi'):
     # inp - array containing responses, outcomes, and a switch variable witch turns off update in the presence of nans
     # nans - bool array pointing towards locations of nan responses and outcomes
     # n_subs - int value, total number of subjects (each subjects is fited to a different parameter value)
@@ -75,11 +75,11 @@ def durw_fit(inp, nans, n_subs, last):
 
     #fit the model    
     with durw:
-        approx = fit(method = 'advi', n = 50000, progressbar = True)
+        approx = fit(method=method, n=50000, progressbar=True)
     
     return approx
 
-def edhmm_fit(inp, nans, n_subs, last):
+def edhmm_fit(inp, nans, n_subs, last, method='advi'):
     # inp - array containing responses, outcomes, and a switch variable witch turns off update in the presence of nans
     # nans - bool array pointing towards locations of nan responses and outcomes
     # n_subs - int value, total number of subjects (each subjects is fited to a different parameter value)
@@ -167,6 +167,6 @@ def edhmm_fit(inp, nans, n_subs, last):
     
     #fit the model    
     with edhmm:
-        approx = fit(method = 'advi', n = 50000, progressbar = True)
+        approx = fit(method=method, n=50000, progressbar=True)
         
     return approx
