@@ -59,29 +59,29 @@ approx_durw = durw_fit(inp, nans, n_subs, last)
 approx_edhmm = edhmm_fit(inp, nans, n_subs, last)
 
 #sample from posterior and estimate posterior predictive log-model evidence
-varnames = ['c0', 'beta', 'alpha', 'kappa', 'V0']
-sample, pplme, plike2 = sample_from_posterior(approx_durw, 
-                                              varnames, 
-                                              n_subs,
-                                              inp[last:,:,0], 
-                                              last)
+# varnames = ['c0', 'beta', 'alpha', 'kappa', 'V0']
+# sample, pplme, plike2 = sample_from_posterior(approx_durw, 
+#                                               varnames, 
+#                                               n_subs,
+#                                               inp[last:,:,0], 
+#                                               last)
 
-store = pd.HDFStore('behaivor_fits.h5')
-store['durw/trace'] = sample
-store['durw/pplme'] = pd.Series(pplme)
-store['durw/plike2'] = pd.DataFrame(plike2)
-store.close()
+# store = pd.HDFStore('behaivor_fits.h5')
+# store['durw/trace'] = sample
+# store['durw/pplme'] = pd.Series(pplme)
+# store['durw/plike2'] = pd.DataFrame(plike2)
+# store.close()
 
 
-varnames = ['c0', 'beta', 'delta', 'r', 'muA', 'muB']
-sample, pplme, plike2 = sample_from_posterior(approx_edhmm, 
-                                              varnames, 
-                                              n_subs,
-                                              inp[last:,:,0], 
-                                              last)
+# varnames = ['c0', 'beta', 'delta', 'r', 'muA', 'muB']
+# sample, pplme, plike2 = sample_from_posterior(approx_edhmm, 
+#                                               varnames, 
+#                                               n_subs,
+#                                               inp[last:,:,0], 
+#                                               last)
 
-store = pd.HDFStore('behavior_fits.h5')
-store['edhmm/trace'] = sample
-store['edhmm/pplme'] = pd.Series(pplme)
-store['edhmm/plike2'] = pd.DataFrame(plike2)
-store.close()
+# store = pd.HDFStore('behavior_fits.h5')
+# store['edhmm/trace'] = sample
+# store['edhmm/pplme'] = pd.Series(pplme)
+# store['edhmm/plike2'] = pd.DataFrame(plike2)
+# store.close()
